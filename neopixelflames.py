@@ -15,23 +15,28 @@ import adafruit_fancyled.adafruit_fancyled as fancy
 
 # Basic black body color palette
 HEAT_COLORS = [
-    (0.75, 0.0, 0.2),  # NCS Red
-    (1.0, 0.0, 0.0),   # Red
+    # (0.75, 0.0, 0.2),  # NCS Red
+    # (1.0, 0.0, 0.0),   # Red
+    (0.7, 0.2, 0.0),   # Dark red
+    (0.8, 0.3, 0.1),   # Orange
+    (0.8, 0.4, 0.1),   # Orange
+    (0.8, 0.6, 0.1),   # Orange
     (1.0, 0.5, 0.0),   # Orange
-    (1.0, 0.7, 0.2),   # Saffron
+    (0.8, 0.7, 0.1),   # Yellow
+    (1.0, 0.7, 0.2),   # Yellow
     (1.0, 0.9, 0.9),   # White
 ]
 
 
 # Color balance / brightness for gamma function
-LEVELS = (0.9, 1.0, 0.15)
+LEVELS = (0.9, 0.8, 0.15)
 
 
 # Default JSON config
 DEFAULT_CONFIG = {
     'num_pixels': 60,
     'sparking': 100,
-    'cooling': 50,
+    'cooling': 40,
     'colors': HEAT_COLORS,
     'levels': LEVELS,
     'color_smoothing': False,
@@ -40,8 +45,6 @@ DEFAULT_CONFIG = {
 
 class NeoPixelFlames(object):
 
-    def __init__(self, pin=None, num_pixels=60, sparking=100, cooling=50,
-                 colors=HEAT_COLORS, levels=LEVELS):
     def __init__(self, pin=None, num_pixels=0, sparking=0, cooling=0,
                  colors=HEAT_COLORS, levels=LEVELS, color_smoothing=False):
         # The GPIO pin the pixels are attached to
@@ -106,20 +109,21 @@ class NeoPixelFlames(object):
             )
 
     def heat(self):
-        """ Heat from each cell drifts 'up' and diffuses a little """
-        for p in reversed(range(1, self.num_pixels)):
+        """ Heat from each pixel diffuses to its neighbors """
+        for p in range(self.num_pixels):
             self.heat_values[p] = (
                 (
-                    self.heat_values[p - 1] +
-                    self.heat_values[p - 2] +
-                    self.heat_values[p - 2]
-                ) / 3
+                    self.heat_values[p - 2 if p > 0 else self.num_pixels - 2] +
+                    self.heat_values[p - 1 if p > 1 else self.num_pixels - 1] +
+                    self.heat_values[p + 1 if p < self.num_pixels - 1 else 0] +
+                    self.heat_values[p + 2 if p < self.num_pixels - 2 else 1]
+                ) / 4
             )
 
     def spark(self):
         """ Randomly ignite new 'sparks' of heat near the bottom """
         if random.randint(0, 255) < self.sparking:
-            p = random.randint(0, int(self.num_pixels / 2))
+            p = random.randint(0, self.num_pixels - 1)
             self.heat_values[p] = (
                 self.heat_values[p] + random.uniform(160, 240)
             )
@@ -154,6 +158,21 @@ def main():
     parser.add_argument(
         "-c", "--config-file", help="path to json config file"
     )
+    parser.add_argument(
+        '--sparking',
+        type=int,
+        help='The chance (out of 255) that a new spark will be lit each cycle',
+    )
+    parser.add_argument(
+        '--cooling',
+        type=int,
+        help='How much does the fire cools (out of 100) with each cycle',
+    )
+    parser.add_argument(
+        '--smoothing',
+        action='store_true',
+        help='Enable color gradient between given values',
+    )
     args = parser.parse_args()
 
     if args.config_file:
@@ -161,6 +180,14 @@ def main():
             config = json.load(json_file)
     else:
         config = DEFAULT_CONFIG
+
+    # sparking and cooling on the command line override the config
+    if args.sparking:
+        config['sparking'] = args.sparking
+    if args.cooling:
+        config['cooling'] = args.cooling
+    if args.smoothing:
+        config['color_smoothing'] = args.smoothing
 
     fire = NeoPixelFlames(
         num_pixels=config['num_pixels'],

@@ -7,6 +7,7 @@ import signal
 import sys
 
 import board
+from colour import Color
 import neopixel
 
 import adafruit_fancyled.adafruit_fancyled as fancy
@@ -33,6 +34,7 @@ DEFAULT_CONFIG = {
     'cooling': 50,
     'colors': HEAT_COLORS,
     'levels': LEVELS,
+    'color_smoothing': False,
 }
 
 
@@ -40,6 +42,8 @@ class NeoPixelFlames(object):
 
     def __init__(self, pin=None, num_pixels=60, sparking=100, cooling=50,
                  colors=HEAT_COLORS, levels=LEVELS):
+    def __init__(self, pin=None, num_pixels=0, sparking=0, cooling=0,
+                 colors=HEAT_COLORS, levels=LEVELS, color_smoothing=False):
         # The GPIO pin the pixels are attached to
         if pin is None:
             pin = board.D18
@@ -59,11 +63,9 @@ class NeoPixelFlames(object):
         # Suggested range 20-100
         self.cooling = cooling
 
-        # Custom colors
-        if colors is not None:
-            self.colors = [fancy.CRGB(*c) for c in colors]
-        else:
-            self.colors = HEAT_COLORS
+        if color_smoothing:
+            colors = self.rgb_color_gradient(colors)
+        self.colors = [fancy.CRGB(*c) for c in colors]
 
         # Custom levels
         if levels is not None:
@@ -81,6 +83,18 @@ class NeoPixelFlames(object):
         )
 
         self.range = list(range(self.num_pixels))
+
+    def rgb_color_gradient(self, colors):
+        # Take the colors we were given and calculate a gradient between them
+        color_objs = []
+        for current_color, next_color in zip(colors, colors[1:]+[None]):
+            if next_color is None:
+                break
+            color_objs += Color(rgb=current_color).range_to(
+                Color(rgb=next_color), 10
+            )
+
+        return (c.rgb for c in color_objs)
 
     def cool(self):
         """ Cool down every cell a little """
@@ -154,6 +168,7 @@ def main():
         cooling=config['cooling'],
         colors=config['colors'],
         levels=config['levels'],
+        color_smoothing=config['color_smoothing'],
     )
 
     def signal_handler(signal, frame):

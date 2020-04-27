@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'adafruit-circuitpython-neopixel',
         'adafruit-circuitpython-fancyled',
+        'colour',
     ],
     entry_points={
         'console_scripts': ['neopixelflames = neopixelflames:main', ]

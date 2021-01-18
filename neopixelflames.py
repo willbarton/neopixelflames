@@ -13,7 +13,6 @@ import neopixel
 import adafruit_fancyled.adafruit_fancyled as fancy
 
 
-# Basic black body color palette
 HEAT_COLORS = [
     # (0.75, 0.0, 0.2),  # NCS Red
     # (1.0, 0.0, 0.0),   # Red
@@ -45,7 +44,7 @@ DEFAULT_CONFIG = {
 
 class NeoPixelFlames(object):
 
-    def __init__(self, pin=None, num_pixels=0, sparking=0, cooling=0,
+    def __init__(self, pin=None, num_pixels=0, sparking=100, cooling=40,
                  colors=HEAT_COLORS, levels=LEVELS, color_smoothing=False):
         # The GPIO pin the pixels are attached to
         if pin is None:
@@ -146,6 +145,13 @@ class NeoPixelFlames(object):
         self.spark()
         self.set_pixel_values()
         self.pixels.show()
+
+    def start(self):
+        while True:
+            next(fire)
+
+    def stop(self):
+        self.reset()
 
     def reset(self):
         for p in range(self.num_pixels):
